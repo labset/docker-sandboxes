@@ -44,6 +44,9 @@ capabilities:
           - raw.githubusercontent.com:443
           # mise's registry/shorthand index and version metadata service.
           - mise.jdx.dev:443
+          # mise's core java plugin resolves JVM release metadata from a
+          # separate host from mise.jdx.dev above.
+          - mise-java.jdx.dev:443
         # Deliberately not exhaustive: mise is a router to whichever
         # upstream registry a given tool's backend names (npm, PyPI,
         # crates.io, RubyGems, the Go proxy, arbitrary plugin git hosts,
