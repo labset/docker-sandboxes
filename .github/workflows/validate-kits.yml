@@ -1,0 +1,44 @@
+name: Validate kits
+
+on:
+  pull_request:
+    paths: ["kits/**", "mise.toml", ".github/actions/**", ".github/workflows/validate-kits.yml"]
+  push:
+    branches-ignore: [main]
+    paths: ["kits/**", "mise.toml", ".github/actions/**", ".github/workflows/validate-kits.yml"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: validate-kits-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    outputs:
+      kits: ${{ steps.discover.outputs.kits }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: discover
+        uses: ./.github/actions/discover-kits
+
+  validate:
+    needs: discover
+    if: needs.discover.outputs.kits != '[]'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        kit: ${{ fromJson(needs.discover.outputs.kits) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Builds multi-platform, exports an OCI layout, and runs kit-tck
+      # against it — see .github/actions/build-kit. No push here; that only
+      # happens from publish-kits.yml, on main.
+      - uses: ./.github/actions/build-kit
+        with:
+          kit: ${{ matrix.kit }}

@@ -1,0 +1,67 @@
+name: Build kit
+description: >-
+  Resolves a kit's pinned version, builds it multi-platform into a local OCI
+  layout, and validates it with kit-tck. Does not push — that's the caller's
+  job once this passes. Assumes the caller already checked out the repo.
+
+inputs:
+  kit:
+    description: Kit name (a kits/<kit>/<kit>.yaml must exist)
+    required: true
+
+outputs:
+  version:
+    description: The kit's pinned version, read from args.version.default
+    value: ${{ steps.kit.outputs.version }}
+  descriptor:
+    description: Path to the kit's descriptor, relative to the repo root
+    value: ${{ steps.kit.outputs.descriptor }}
+  layout:
+    description: Path to the exported OCI layout kit-tck validated
+    value: ${{ steps.build.outputs.layout }}
+
+runs:
+  using: composite
+  steps:
+    # Installs yq and kit-tck per the repo's own mise.toml (see there for
+    # why kit-tck is pinned by GitHub release rather than a registry
+    # shorthand). This is the same mise this repo ships a sandbox kit for —
+    # dev tooling here uses it too rather than hand-rolling installs.
+    - uses: jdx/mise-action@v4
+
+    - id: kit
+      shell: bash
+      run: |
+        set -eu
+        descriptor="kits/${{ inputs.kit }}/${{ inputs.kit }}.yaml"
+        version="$(yq -r '.args.version.default' "$descriptor")"
+        if [ -z "$version" ] || [ "$version" = "null" ]; then
+          echo "no args.version.default in $descriptor" >&2
+          exit 1
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "descriptor=$descriptor" >> "$GITHUB_OUTPUT"
+
+    - uses: docker/setup-qemu-action@v3
+    - uses: docker/setup-buildx-action@v3
+
+    # Multi-platform build, exported as an OCI layout (no registry needed)
+    # so kit-tck can judge every platform manifest before anything is
+    # published.
+    - id: build
+      shell: bash
+      run: |
+        set -eu
+        layout="/tmp/${{ inputs.kit }}-layout"
+        docker buildx build "kits/${{ inputs.kit }}" \
+          -f "${{ steps.kit.outputs.descriptor }}" \
+          --platform linux/amd64,linux/arm64 \
+          --cache-from "type=gha,scope=${{ inputs.kit }}" \
+          --cache-to "type=gha,scope=${{ inputs.kit }},mode=max" \
+          -t "${{ inputs.kit }}:${{ steps.kit.outputs.version }}" \
+          --output "type=oci,dest=${layout},tar=false"
+        echo "layout=$layout" >> "$GITHUB_OUTPUT"
+
+    - shell: bash
+      run: |
+        kit-tck validate --layout "${{ steps.build.outputs.layout }}" "${{ steps.kit.outputs.version }}"
