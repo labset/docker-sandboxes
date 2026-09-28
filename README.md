@@ -19,37 +19,32 @@ kits/<name>/
 |---|---|---|
 | [`mise`](kits/mise) | mixin | [mise-en-place](https://mise.jdx.dev) (`mise`), the polyglot tool version/task manager, as a pinned static binary — no `mise.toml` orchestration |
 
-## Adding a kit
+## Using a kit
 
-Use the `create-kit-v3` skill from
-[docker/sandbox-kit-spec](https://github.com/docker/sandbox-kit-spec/blob/main/skills/create-kit-v3/SKILL.md)
-as the authoring reference — it covers choosing `workload` vs `mixin`,
-capability declarations, version pinning, and the `docker buildx` / `sbx` /
-`kit-tck` build-verify loop. Each new kit gets its own `kits/<name>/`
-directory following the layout above.
+Published kits live at `ghcr.io/labset/docker-sandboxes`, one moving tag per
+kit (`:<kit>`) plus an immutable per-version tag (`:<kit>-<version>`).
 
-## Tooling
+Compose a kit onto a sandbox with `sbx` (see
+[Docker Docs](https://docs.docker.com/ai/sandboxes/install/) to install it):
 
-- **`docker buildx`** — builds a kit; nothing extra to install, BuildKit
-  pulls the `docker/sandbox-kit:3` frontend from each descriptor's `# syntax=`
-  line.
-- **`sbx`** — runs a kit as, or composed onto, a sandbox. See
-  [Docker Docs](https://docs.docker.com/ai/sandboxes/install/).
-- **`kit-tck`** and **`yq`** — pinned in this repo's own `mise.toml`. Run
-  `mise install` once (or use [`mise-action`](https://github.com/jdx/mise-action)
-  in CI, as the workflows below do) rather than installing either by hand.
+```sh
+# latest published mise
+sbx run <workload> --kit ghcr.io/labset/docker-sandboxes:mise
 
-## CI
+# pinned to a specific version
+sbx run <workload> --kit ghcr.io/labset/docker-sandboxes:mise-2026.9.16
+```
 
-Two workflows, both built from the same [`build-kit`](.github/actions/build-kit)
-composite action (resolve the kit's pinned version, multi-platform build,
-`kit-tck validate`):
+Or use a local checkout while developing:
 
-- **[`validate-kits.yml`](.github/workflows/validate-kits.yml)** — pull
-  requests and pushes to any branch but `main`. Builds and validates every
-  kit; never pushes.
-- **[`publish-kits.yml`](.github/workflows/publish-kits.yml)** — pushes to
-  `main`. Runs the same build-and-validate gate, then pushes to
-  `ghcr.io/<owner>/<repo>:<kit>-<version>` (immutable) and `:<kit>` (moving
-  tag) — several kits share one repository, so the version lives in the tag
-  rather than the path.
+```sh
+sbx run <workload> --kit ./kits/mise
+```
+
+Each kit's own README documents what it installs, the network access it
+declares and how to extend it.
+
+## Contributing
+
+Adding a kit, the build/verify tooling and CI are covered in
+[CONTRIBUTING.md](CONTRIBUTING.md).
