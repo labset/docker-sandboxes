@@ -1,0 +1,4 @@
+# Dev tooling for this repo's kits (build + validate), used locally and in CI.
+[tools]
+yq = "4.53.6"
+"github:docker/sandbox-kit-spec" = "3.0.0-m.6" # kit-tck

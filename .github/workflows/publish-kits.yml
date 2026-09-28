@@ -1,0 +1,65 @@
+name: Publish kits
+
+on:
+  push:
+    branches: [main]
+    paths: ["kits/**", "mise.toml", ".github/actions/**", ".github/workflows/publish-kits.yml"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: publish-kits-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    outputs:
+      kits: ${{ steps.discover.outputs.kits }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: discover
+        uses: ./.github/actions/discover-kits
+
+  publish:
+    needs: discover
+    if: needs.discover.outputs.kits != '[]'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        kit: ${{ fromJson(needs.discover.outputs.kits) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same build + kit-tck gate as validate-kits.yml — a kit that fails
+      # conformance never reaches the push step below.
+      - id: build
+        uses: ./.github/actions/build-kit
+        with:
+          kit: ${{ matrix.kit }}
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        run: |
+          # Several kits share this one repository, so the kit and its
+          # version live in the tag rather than the path: <kit>-<version> is
+          # the immutable reference, <kit> the moving tag consumers can pin
+          # past, matching docker/sandbox-kit-spec's RequireVersionedProvides.
+          repo="$(echo 'ghcr.io/${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          docker buildx build "kits/${{ matrix.kit }}" \
+            -f "${{ steps.build.outputs.descriptor }}" \
+            --platform linux/amd64,linux/arm64 \
+            --cache-from "type=gha,scope=${{ matrix.kit }}" \
+            --push \
+            -t "${repo}:${{ matrix.kit }}-${{ steps.build.outputs.version }}" \
+            -t "${repo}:${{ matrix.kit }}" \
+            --metadata-file "/tmp/${{ matrix.kit }}-push.json"

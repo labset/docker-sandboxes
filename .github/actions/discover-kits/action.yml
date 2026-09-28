@@ -1,0 +1,23 @@
+name: Discover kits
+description: >-
+  Lists every kits/<name>/ directory that follows the companion-pair
+  convention (a kits/<name>/<name>.yaml descriptor).
+
+outputs:
+  kits:
+    description: JSON array of kit names, e.g. ["mise"]
+    value: ${{ steps.discover.outputs.kits }}
+
+runs:
+  using: composite
+  steps:
+    - id: discover
+      shell: bash
+      run: |
+        set -eu
+        kits=$(for d in kits/*/; do
+          name="$(basename "$d")"
+          [ -f "${d}${name}.yaml" ] && echo "$name"
+        done | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        echo "Found kits: $kits"
+        echo "kits=$kits" >> "$GITHUB_OUTPUT"

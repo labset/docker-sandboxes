@@ -35,4 +35,21 @@ directory following the layout above.
   line.
 - **`sbx`** — runs a kit as, or composed onto, a sandbox. See
   [Docker Docs](https://docs.docker.com/ai/sandboxes/install/).
-- **`kit-tck`** — conformance checks: `go install github.com/docker/sandbox-kit-spec/v3/cmd/kit-tck@latest`.
+- **`kit-tck`** and **`yq`** — pinned in this repo's own `mise.toml`. Run
+  `mise install` once (or use [`mise-action`](https://github.com/jdx/mise-action)
+  in CI, as the workflows below do) rather than installing either by hand.
+
+## CI
+
+Two workflows, both built from the same [`build-kit`](.github/actions/build-kit)
+composite action (resolve the kit's pinned version, multi-platform build,
+`kit-tck validate`):
+
+- **[`validate-kits.yml`](.github/workflows/validate-kits.yml)** — pull
+  requests and pushes to any branch but `main`. Builds and validates every
+  kit; never pushes.
+- **[`publish-kits.yml`](.github/workflows/publish-kits.yml)** — pushes to
+  `main`. Runs the same build-and-validate gate, then pushes to
+  `ghcr.io/<owner>/<repo>:<kit>-<version>` (immutable) and `:<kit>` (moving
+  tag) — several kits share one repository, so the version lives in the tag
+  rather than the path.

@@ -22,7 +22,13 @@ added to the composed workload's policy. See `mise-context.md`.
 
 ## Build & verify
 
+`kit-tck` and `yq` are pinned in the repo root's `mise.toml` — `mise install`
+once to get both rather than installing either by hand. CI runs the same
+steps via [`build-kit`](../../.github/actions/build-kit).
+
 ```sh
+mise install   # from the repo root, once
+
 cd kits/mise
 
 # validate the descriptor
