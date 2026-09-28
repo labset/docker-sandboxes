@@ -50,8 +50,9 @@ docker buildx build kits/$kit -f "$descriptor" -t "$kit:$version" \
 # 3. check it against the kit spec
 kit-tck validate --layout /tmp/$kit-layout "$version"
 
-# 4. compose onto a workload and try it
-sbx run <workload> --kit kits/$kit --detached --name t
+# 4. compose onto a v3 workload kit and try it (bare built-in agent
+#    shortcuts like `claude` are still v2 and can't be composed with a v3 kit)
+sbx run docker/sbx-kit-claude --kit kits/$kit --detached --name t
 sbx exec t <command>   # e.g. `mise --version`
 ```
 

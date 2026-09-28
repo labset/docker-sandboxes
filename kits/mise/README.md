@@ -39,8 +39,9 @@ docker buildx build . -f mise.yaml -t mise:2026.9.16 \
   --output type=oci,dest=/tmp/mise-layout,tar=false
 kit-tck validate --layout /tmp/mise-layout 2026.9.16
 
-# compose onto a workload and run it
-sbx run ./<workload> --kit . --detached --name t .
+# compose onto a v3 workload kit and run it (bare built-in agent shortcuts
+# like `claude` are still v2 and can't be composed with a v3 mixin)
+sbx run docker/sbx-kit-claude --kit . --detached --name t
 sbx exec t mise --version
 ```
 

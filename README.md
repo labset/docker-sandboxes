@@ -25,20 +25,25 @@ Published kits live at `ghcr.io/labset/docker-sandboxes`, one moving tag per
 kit (`:<kit>`) plus an immutable per-version tag (`:<kit>-<version>`).
 
 Compose a kit onto a sandbox with `sbx` (see
-[Docker Docs](https://docs.docker.com/ai/sandboxes/install/) to install it):
+[Docker Docs](https://docs.docker.com/ai/sandboxes/install/) to install it).
+A composition needs exactly one `workload`-kind kit as its base — these
+examples use Docker's published v3 [`docker/sbx-kit-claude`](https://hub.docker.com/r/docker/sbx-kit-claude),
+but any v3 workload kit works. Mixing a v3 mixin like `mise` onto the bare
+`claude` built-in shortcut fails: that shortcut still resolves to a legacy v2
+kit, and v2 and v3 kits can't be composed together.
 
 ```sh
 # latest published mise
-sbx run <workload> --kit ghcr.io/labset/docker-sandboxes:mise
+sbx run docker/sbx-kit-claude --kit ghcr.io/labset/docker-sandboxes:mise
 
 # pinned to a specific version
-sbx run <workload> --kit ghcr.io/labset/docker-sandboxes:mise-2026.9.16
+sbx run docker/sbx-kit-claude --kit ghcr.io/labset/docker-sandboxes:mise-2026.9.16
 ```
 
 Or use a local checkout while developing:
 
 ```sh
-sbx run <workload> --kit ./kits/mise
+sbx run docker/sbx-kit-claude --kit ./kits/mise
 ```
 
 Each kit's own README documents what it installs, the network access it
